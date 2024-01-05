@@ -45,8 +45,8 @@ def home():
         f"/api/v1.0/precipitation<br/>"
         f"/api/v1.0/stations<br/>"
         f"/api/v1.0/tobs<br/>"
-        f"/api/v1.0/<start><br/>"
-        f"/api/v1.0/<end>"
+        f"/api/v1.0/2016.8.23<br/>"
+        f"/api/v1.0/2016.8.23/2017.8.23"
     )
 
 ## Define precipitation analysis page
@@ -109,7 +109,8 @@ def tobs():
 
     return jsonify(tobs)
 
-@app.route("/api/v1.0/<start>")
+# Define a page for average temperatures on 8/23/2016
+@app.route("/api/v1.0/2016.8.23")
 def start():
 
     # Create a session link
@@ -118,13 +119,47 @@ def start():
     # Query minimun, maximum, and average temperature for the date one year prior to the last recorded measurement
     start_stats = [func.min(measurement.tobs),
                    func.avg(measurement.tobs),
-                   func.min(measurement.tobs)]
+                   func.max(measurement.tobs)]
 
     one_year_temp = session.query(*start_stats).\
                     filter(measurement.date == dt.date(2016, 8, 23)).all()
     
-    return jsonify(one_year_temp)
+    session.close()
     
+    for min, avg, max in one_year_temp:
+        temp_dict = {}
+        temp_dict['Minimum Temp'] = min
+        temp_dict['Average Temp'] = avg
+        temp_dict['Maximum Temp'] = max
+    
+    return jsonify(temp_dict)
+    
+#Define a page for average temperatures on 8/23/2016 - 8/23/2017
+@app.route("/api/v1.0/2016.8.23/2017.8.23")
+def start_end():
+
+    #Create a session link
+    session = Session(engine)
+
+    # Query minimum, maximum, and average temperature for the entire last year of data
+    start_stats = [func.min(measurement.tobs),
+                   func.avg(measurement.tobs),
+                   func.max(measurement.tobs)]
+    
+    # Indicate all dates greater than the start date
+    total_year_temp = session.query(*start_stats).\
+                    filter(measurement.date >= dt.date(2016, 8, 23)).all()
+    
+    session.close()
+    
+    # Print min, avg, and max with their appropriate labels as a dictionary
+    for min, avg, max in total_year_temp:
+        temp_dict = {}
+        temp_dict['Minimum Temp'] = min
+        temp_dict['Average Temp'] = avg
+        temp_dict['Maximum Temp'] = max
+
+    return jsonify(temp_dict)
 
 if __name__ == '__main__':
     app.run(debug=True)
